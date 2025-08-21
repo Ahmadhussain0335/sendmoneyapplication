@@ -134,7 +134,7 @@ com.assignment.sendmoneyapplication
 1.  Clone the repository:
 
     ``` bash
-    git clone https://github.com/your-username/sendmoneyapplication.git
+    git clone https://github.com/Ahmadhussain0335/sendmoneyapplication.git
     ```
 
 2.  Open the project in **Android Studio**.
