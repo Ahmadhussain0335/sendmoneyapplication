@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">Send Money App</string>
+    <string name="sign_in">Sign In</string>
+    <string name="email_hint">Email*</string>
+    <string name="password_hint">Password*</string>
+    <string name="welcome_message">Welcome to the Send Money App!</string>
+    <string name="error_title">Oops! Something went wrong</string>
+    <string name="error_email_empty">Email cannot be empty</string>
+    <string name="error_password_empty">Password cannot be empty</string>
+    <string name="dismiss">Got it</string>
+    <string name="terms_text">By processing you also agree the Terms of Service and Privacy Policy</string>
+    <string name="toggle_password_description">Toggle password visibility</string>
+    <string name="send_money">SEND MONEY APP</string>
+    <string name="transaction_history">Transaction History</string>
+</resources>
