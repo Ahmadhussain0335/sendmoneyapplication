@@ -27,6 +27,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -41,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.max
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import com.assignment.sendmoneyapplication.R
@@ -62,6 +64,8 @@ fun SendMoneyScreen(
     var selectedService by remember { mutableStateOf<Service?>(null) } // Holds currently selected service
     var selectedProvider by remember { mutableStateOf<Provider?>(null) } // Holds currently selected provider
     val fieldValues = remember { mutableStateMapOf<String, String>() } // Stores user input for dynamic fields
+
+    val fieldErrors = remember { mutableStateMapOf<String, Boolean>() } // field name -> isError
 
     // Initialize first service & provider when schema is loaded
     LaunchedEffect(schema) {
@@ -134,90 +138,118 @@ fun SendMoneyScreen(
             )
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .background(Color(0xFFEEF1F8))
-                .padding(16.dp),
-            verticalArrangement = Arrangement.Top
-        ) {
-            Spacer(modifier = Modifier.height(15.dp))
 
-            // ---------------- Service Dropdown ----------------
-            selectedService?.let {
-                ServiceDropdown(
-                    schema = schema,
+        // ---------------- Loader When Schema is Empty ----------------
+        if (schema.services.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(
+                        color = Color(0xFF1E88E5),
+                        strokeWidth = 4.dp,
+                        modifier = Modifier.size(50.dp)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Loading services...",
+                        fontSize = 16.sp,
+                        color = Color.Gray,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize()
+                    .background(Color(0xFFEEF1F8))
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.Top
+            ) {
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // ---------------- Service Dropdown ----------------
+                selectedService?.let {
+                    ServiceDropdown(
+                        schema = schema,
+                        language = language,
+                        selectedService = selectedService,
+                        onServiceSelected = { service ->
+                            // Update selected service & reset provider/fields
+                            selectedService = service
+                            selectedProvider = service.providers.firstOrNull()
+                            fieldValues.clear()
+                            fieldErrors.clear()
+
+                            // Pre-fill option fields for provider
+                            selectedProvider?.required_fields?.forEach { field ->
+                                if (field.type == "option" && !field.options.isNullOrEmpty()) {
+                                    fieldValues[field.name] = field.options[0].name
+                                }
+                            }
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // ---------------- Provider Dropdown ----------------
+                selectedProvider?.let { provider ->
+                    ProviderDropdown(
+                        service = selectedService!!,
+                        selectedProvider = provider,
+                        onProviderSelected = { newProvider ->
+                            // Update selected provider & reset field values
+                            selectedProvider = newProvider
+                            fieldValues.clear()
+                            fieldErrors.clear()
+
+                            // Pre-fill option fields for new provider
+                            newProvider.required_fields.forEach { field ->
+                                if (field.type == "option" && !field.options.isNullOrEmpty()) {
+                                    fieldValues[field.name] = field.options[0].name
+                                }
+                            }
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // ---------------- Dynamic Fields ----------------
+                selectedProvider?.required_fields?.forEach { field ->
+                    // Render dynamic input fields (text, number, dropdown etc.)
+                    DynamicField(field, fieldValues, fieldErrors, language)
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+
+                // ---------------- Language Switch ----------------
+                LanguageToggleSwitch(
                     language = language,
+                    onLanguageChange = { newLang -> viewModel.setLanguage(newLang) },
+                    navController
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+
+                val transferVM: FormViewModel = viewModel()
+                val scope = rememberCoroutineScope()
+
+                // ---------------- Send Button ----------------
+                SendButton(
                     selectedService = selectedService,
-                    onServiceSelected = { service ->
-                        // Update selected service & reset provider/fields
-                        selectedService = service
-                        selectedProvider = service.providers.firstOrNull()
-                        fieldValues.clear()
-
-                        // Pre-fill option fields for provider
-                        selectedProvider?.required_fields?.forEach { field ->
-                            if (field.type == "option" && !field.options.isNullOrEmpty()) {
-                                fieldValues[field.name] = field.options[0].name
-                            }
-                        }
-                    }
+                    selectedProvider = selectedProvider,
+                    fieldValues = fieldValues,
+                    language = language,
+                    transferVM = transferVM
                 )
+
+                Spacer(modifier = Modifier.height(1.dp))
             }
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            // ---------------- Provider Dropdown ----------------
-            selectedProvider?.let { provider ->
-                ProviderDropdown(
-                    service = selectedService!!,
-                    selectedProvider = provider,
-                    onProviderSelected = { newProvider ->
-                        // Update selected provider & reset field values
-                        selectedProvider = newProvider
-                        fieldValues.clear()
-
-                        // Pre-fill option fields for new provider
-                        newProvider.required_fields.forEach { field ->
-                            if (field.type == "option" && !field.options.isNullOrEmpty()) {
-                                fieldValues[field.name] = field.options[0].name
-                            }
-                        }
-                    }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            // ---------------- Dynamic Fields ----------------
-            selectedProvider?.required_fields?.forEach { field ->
-                // Render dynamic input fields (text, number, dropdown etc.)
-                DynamicField(field, fieldValues, language)
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-
-            // ---------------- Language Switch ----------------
-            LanguageToggleSwitch(
-                language = language,
-                onLanguageChange = { newLang -> viewModel.setLanguage(newLang) },
-                navController
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-
-            val transferVM: FormViewModel = viewModel()
-            val scope = rememberCoroutineScope()
-
-            // ---------------- Send Button ----------------
-            SendButton(
-                selectedService = selectedService,
-                selectedProvider = selectedProvider,
-                fieldValues = fieldValues,
-                language = language,
-                transferVM = transferVM
-            )
-
-            Spacer(modifier = Modifier.height(1.dp))
         }
     }
 }
@@ -251,6 +283,7 @@ fun SendButton(
                 selectedProvider?.required_fields?.forEach { field ->
                     val value = fieldValues[field.name].orEmpty()
                     val isEmpty = value.isBlank()
+                    val validatorRegex = field.validation?.toRegex()
 
                     if (isEmpty) {
                         // Pick localized error message (fallback to English or default)
@@ -262,6 +295,12 @@ fun SendButton(
                             else -> "This field is required"
                         }
                         errors.add(msg ?: "This field is required")
+                    }
+
+                    // Check regex match if not empty
+                    else if (validatorRegex != null && !validatorRegex.matches(value)) {
+                        val msg = "Invalid input for ${getLabel(field.label, language)}"
+                        errors.add(msg)
                     }
                 }
 
@@ -442,7 +481,7 @@ fun LanguageToggleSwitch(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp), // Padding for spacing
+            .padding(horizontal = 16.dp, vertical = 5.dp), // Padding for spacing
         horizontalArrangement = Arrangement.SpaceBetween, // Spread items: left (History), right (Toggle)
         verticalAlignment = Alignment.CenterVertically // Center items vertically
     ) {
@@ -548,7 +587,11 @@ fun ServiceDropdown(
                     .menuAnchor() // Anchor for dropdown
                     .fillMaxWidth()
                     .height(50.dp) // Increase height
-                    .border(1.dp, Color(0xFFEBEDF2), shape = RoundedCornerShape(4.dp)) // Light gray border
+                    .border(
+                        1.dp,
+                        Color(0xFFEBEDF2),
+                        shape = RoundedCornerShape(4.dp)
+                    ) // Light gray border
                     .background(Color.White, shape = RoundedCornerShape(4.dp))
             )
             // Dropdown menu with all service options
@@ -651,12 +694,16 @@ fun ProviderDropdown(
 // ---------------- Dynamic Field ----------------
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DynamicField(field: Field, fieldValues: MutableMap<String, String>, language: String) {
+fun DynamicField(field: Field, fieldValues: MutableMap<String, String>, fieldErrors: MutableMap<String, Boolean>, language: String) {
     when (field.type) {
         // Text input (plain, number, or msisdn)
         "text", "number", "msisdn" -> {
-            val maxLength = (field.max_length as? Double)?.toInt() ?: Int.MAX_VALUE // Max input length
+            val maxLength = field.max_length.toSafeInt() // Max input length
             val validatorRegex = field.validation?.toRegex() // Optional regex validator
+
+            val isError = fieldErrors[field.name] ?: false
+            var inputValue by remember { mutableStateOf(fieldValues[field.name] ?: "") }
+            var isValid by remember { mutableStateOf(true) }
 
             Column(modifier = Modifier.fillMaxWidth()) {
                 // Field label above input
@@ -668,16 +715,34 @@ fun DynamicField(field: Field, fieldValues: MutableMap<String, String>, language
                 TextField(
                     value = fieldValues[field.name] ?: "", // Current input value
                     onValueChange = { input ->
-                        fieldValues[field.name] = input
-//                        // Enforce max length
-//                        val trimmed = input.take(maxLength)
-//
-//                        // Apply validator (if defined)
-//                        val isValid = validatorRegex?.matches(trimmed) ?: true
-//
-//                        if (isValid) {
-//                            fieldValues[field.name] = trimmed
-//                        }
+
+                        // ---------------- Option 1: Without Validator ----------------
+                        // ⚠️ Use this if you don’t need validation or length checks
+                        // Stores raw input directly into fieldValues
+                        // -------------------------------------------------------------
+                        //fieldValues[field.name] = input
+
+
+                        // ---------------- Option 2: With Validator -------------------
+                        // ✅ Use this if you want to enforce max length and apply regex validation
+                        // Steps:
+                        // 1. Enforce maximum length (trim input if longer than allowed)
+                        // 2. Validate input against regex (if validatorRegex is provided)
+                        // 3. Save only if input is valid
+                        // -------------------------------------------------------------
+
+                        // Limit input to maxLength
+                        val trimmed = input.take(maxLength)
+                        inputValue = trimmed
+
+                        // Validate input
+                        isValid = validatorRegex?.matches(trimmed) ?: true
+
+                        // Save current value
+                        fieldValues[field.name] = trimmed
+
+                        // Update fieldValues only if needed
+                        fieldErrors[field.name] = !isValid
                     },
                     placeholder = {
                         Text(
@@ -694,6 +759,17 @@ fun DynamicField(field: Field, fieldValues: MutableMap<String, String>, language
                         textAlign = TextAlign.Start,
                         lineHeight = 20.sp
                     ),
+                    trailingIcon = {
+                        if (inputValue.isNotEmpty()) {
+                            if (!isValid) {
+                                Icon(
+                                    imageVector = Icons.Default.Error,
+                                    contentDescription = "Invalid",
+                                    tint = Color.Red,
+                                )
+                            }
+                        }
+                    },
                     colors = TextFieldDefaults.textFieldColors(
                         containerColor = Color.White,
                         unfocusedIndicatorColor = Color.Transparent,
@@ -710,6 +786,16 @@ fun DynamicField(field: Field, fieldValues: MutableMap<String, String>, language
                         .background(Color.White, shape = RoundedCornerShape(4.dp))
                         .padding(horizontal = 1.dp)
                 )
+
+                // Show error message below TextField
+                if (isError) {
+                    Text(
+                        text = "Invalid input. Please follow the correct format.",
+                        color = Color.Red,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(start = 8.dp, top = 4.dp)
+                    )
+                }
             }
         }
 
@@ -795,6 +881,16 @@ fun getLabel(label: Any?, language: String): String {
             ?: (label as? Map<String, String>)?.get("en") ?: "" // fallback to English
         is String -> label
         else -> ""
+    }
+}
+
+fun Any?.toSafeInt(default: Int = 0): Int {
+    return when (this) {
+        is Int -> this
+        is Double -> this.toInt()
+        is Float -> this.toInt()
+        is String -> this.toIntOrNull() ?: default
+        else -> default
     }
 }
 

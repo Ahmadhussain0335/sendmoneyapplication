@@ -1,5 +1,6 @@
 package com.assignment.sendmoneyapplication
 
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -26,6 +27,9 @@ class MainActivity : ComponentActivity() {
 
         // Enables drawing behind system bars (status/navigation bar) for edge-to-edge UI
         enableEdgeToEdge()
+
+        // Force portrait for this Activity
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
 
         // Sets the UI content of the activity using Jetpack Compose
         setContent {

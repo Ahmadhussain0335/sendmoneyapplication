@@ -17,6 +17,8 @@ import androidx.compose.material.icons.filled.ManageAccounts
 import androidx.compose.material.icons.filled.Money
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material.icons.filled.Wc
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -217,7 +219,55 @@ fun TransferHistoryScreen(
             // -------------------- Transfer List --------------------
             if (transfers.isEmpty()) {
                 // Show message when no transfers exist
-                Text("No transfers yet.")
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Icon / Illustration
+                    Icon(
+                        imageVector = Icons.Default.Wallet,
+                        contentDescription = "No transfers",
+                        tint = Color(0xFF9E9E9E),
+                        modifier = Modifier
+                            .size(96.dp)
+                            .padding(bottom = 16.dp)
+                    )
+
+                    // Title
+                    Text(
+                        text = "No Transfers Yet",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp,
+                        color = Color(0xFF424242)
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Subtitle / Hint
+                    Text(
+                        text = "Your transaction history will appear here once you send or receive money.",
+                        fontSize = 14.sp,
+                        color = Color(0xFF757575),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Call to Action Button
+                    Button(
+                        onClick = { navController.navigate("home") },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E88E5)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.Send, contentDescription = "Send", tint = Color.White)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Send Money", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
             } else {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
